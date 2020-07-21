@@ -266,7 +266,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
                     $(LOCAL_PATH)/../external/clipper \
                     $(LOCAL_PATH)/../external/uv/include
 
-LOCAL_EXPORT_LDLIBS := -lGLESv2 \
+LOCAL_EXPORT_LDLIBS := -lGLESv3 \
                        -llog \
                        -landroid
 

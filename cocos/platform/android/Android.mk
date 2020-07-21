@@ -27,7 +27,7 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
                     $(LOCAL_PATH)/.. \
                     $(LOCAL_PATH)/../..
 
-LOCAL_EXPORT_LDLIBS := -lGLESv2 \
+LOCAL_EXPORT_LDLIBS := -lGLESv3 \
                        -lEGL \
                        -llog \
                        -landroid

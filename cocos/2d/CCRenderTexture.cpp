@@ -347,7 +347,7 @@ void RenderTexture::setupDepthAndStencil(int powW, int powH)
         
         if(Configuration::getInstance()->supportsOESDepth24())
         {
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24_OES, (GLsizei)powW, (GLsizei)powH);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)powW, (GLsizei)powH);
         }
         else
         {

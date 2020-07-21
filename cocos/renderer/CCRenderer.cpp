@@ -808,8 +808,9 @@ void Renderer::drawBatchedTriangles()
         // FIXME: in order to work as fast as possible, it must "and the exact same size and usage hints it had before."
         //  source: https://www.opengl.org/wiki/Buffer_Object_Streaming#Explicit_multiple_buffering
         // so most probably we won't have any benefit of using it
-        glBufferData(GL_ARRAY_BUFFER, sizeof(_verts[0]) * _filledVertex, nullptr, GL_STATIC_DRAW);
-        void *buf = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        GLsizeiptr len = sizeof(_verts[0]) * _filledVertex;
+        glBufferData(GL_ARRAY_BUFFER, len, nullptr, GL_STATIC_DRAW);
+        void *buf = glMapBufferRange(GL_ARRAY_BUFFER, 0, len, GL_MAP_WRITE_BIT);
         memcpy(buf, _verts, sizeof(_verts[0]) * _filledVertex);
         glUnmapBuffer(GL_ARRAY_BUFFER);
 

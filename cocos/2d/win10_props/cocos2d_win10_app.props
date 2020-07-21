@@ -15,7 +15,7 @@
     <None Include="$(AngleBinPath)libEGL.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="$(AngleBinPath)libGLESv2.dll">
+    <None Include="$(AngleBinPath)libGLESv3.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="$(ZLibBinPath)zlib1.dll">
