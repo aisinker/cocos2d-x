@@ -791,7 +791,7 @@ void Renderer::drawBatchedTriangles()
 
     /************** 2: Copy vertices/indices to GL objects *************/
     auto conf = Configuration::getInstance();
-    if (conf->supportsShareableVAO() && conf->supportsMapBuffer())
+    if (conf->supportsShareableVAO())
     {
         //Bind VAO
         GL::bindVAO(_buffersVAO);
@@ -853,7 +853,7 @@ void Renderer::drawBatchedTriangles()
     }
 
     /************** 4: Cleanup *************/
-    if (conf->supportsShareableVAO() && conf->supportsMapBuffer())
+    if (conf->supportsShareableVAO())
     {
         //Unbind VAO
         GL::bindVAO(0);

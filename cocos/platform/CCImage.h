@@ -87,8 +87,10 @@ public:
         WEBP,
         //! PVR
         PVR,
-        //! ETC
-        ETC,
+        //! ETC1
+        ETC1,
+        //! ETC2
+        ETC2,
         //! S3TC
         S3TC,
         //! ATITC
@@ -228,7 +230,8 @@ protected:
     bool isTiff(const unsigned char * data, ssize_t dataLen);
     bool isWebp(const unsigned char * data, ssize_t dataLen);
     bool isPvr(const unsigned char * data, ssize_t dataLen);
-    bool isEtc(const unsigned char * data, ssize_t dataLen);
+    bool isETC1(const unsigned char * data, ssize_t dataLen);
+    bool isETC2(const unsigned char * data, ssize_t dataLen);
     bool isS3TC(const unsigned char * data,ssize_t dataLen);
     bool isATITC(const unsigned char *data, ssize_t dataLen);
 };

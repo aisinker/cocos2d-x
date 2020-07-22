@@ -43,16 +43,10 @@ Configuration::Configuration()
 : _maxTextureSize(0) 
 , _maxModelviewStackDepth(0)
 , _supportsPVRTC(false)
-, _supportsETC1(false)
 , _supportsS3TC(false)
 , _supportsATITC(false)
-, _supportsNPOT(false)
 , _supportsBGRA8888(false)
-, _supportsDiscardFramebuffer(false)
 , _supportsShareableVAO(false)
-, _supportsOESMapBuffer(false)
-, _supportsOESDepth24(false)
-, _supportsOESPackedDepthStencil(false)
 , _maxSamplesAllowed(0)
 , _maxTextureUnits(0)
 , _glExtensions(nullptr)
@@ -129,10 +123,14 @@ void Configuration::gatherGPUInfo()
     glGetIntegerv(GL_MAX_SAMPLES_APPLE, &_maxSamplesAllowed);
 	_valueDict["gl.max_samples_allowed"] = Value((int)_maxSamplesAllowed);
 #endif
-    
-    _supportsETC1 = checkForGLExtension("GL_OES_compressed_ETC1_RGB8_texture");
-    _valueDict["gl.supports_ETC1"] = Value(_supportsETC1);
-    
+
+#ifdef GL_ES_VERSION_3_0
+    _supportsETC2 = true;
+#else
+    _supportsETC2 = false;
+#endif
+    _valueDict["gl.supports_ETC2"] = Value(_supportsETC2);
+
     _supportsS3TC = checkForGLExtension("GL_EXT_texture_compression_s3tc");
     _valueDict["gl.supports_S3TC"] = Value(_supportsS3TC);
     
@@ -141,33 +139,9 @@ void Configuration::gatherGPUInfo()
     
     _supportsPVRTC = checkForGLExtension("GL_IMG_texture_compression_pvrtc");
 	_valueDict["gl.supports_PVRTC"] = Value(_supportsPVRTC);
-
-    _supportsNPOT = true;
-	_valueDict["gl.supports_NPOT"] = Value(_supportsNPOT);
 	
     _supportsBGRA8888 = checkForGLExtension("GL_IMG_texture_format_BGRA8888");
 	_valueDict["gl.supports_BGRA8888"] = Value(_supportsBGRA8888);
-
-    _supportsDiscardFramebuffer = checkForGLExtension("GL_EXT_discard_framebuffer");
-	_valueDict["gl.supports_discard_framebuffer"] = Value(_supportsDiscardFramebuffer);
-
-#ifdef CC_PLATFORM_PC
-    _supportsShareableVAO = checkForGLExtension("vertex_array_object");
-#else
-    _supportsShareableVAO = checkForGLExtension("GL_OES_vertex_array_object");
-#endif
-    _valueDict["gl.supports_vertex_array_object"] = Value(_supportsShareableVAO);
-
-    _supportsOESMapBuffer = checkForGLExtension("GL_OES_mapbuffer");
-    _valueDict["gl.supports_OES_map_buffer"] = Value(_supportsOESMapBuffer);
-
-    _supportsOESDepth24 = checkForGLExtension("GL_OES_depth24");
-    _valueDict["gl.supports_OES_depth24"] = Value(_supportsOESDepth24);
-
-    
-    _supportsOESPackedDepthStencil = checkForGLExtension("GL_OES_packed_depth_stencil");
-    _valueDict["gl.supports_OES_packed_depth_stencil"] = Value(_supportsOESPackedDepthStencil);
-
 
     CHECK_GL_ERROR_DEBUG();
 }
@@ -225,24 +199,14 @@ int Configuration::getMaxTextureUnits() const
 	return _maxTextureUnits;
 }
 
-bool Configuration::supportsNPOT() const
-{
-	return _supportsNPOT;
-}
-
 bool Configuration::supportsPVRTC() const
 {
 	return _supportsPVRTC;
 }
 
-bool Configuration::supportsETC() const
+bool Configuration::supportsETC2() const
 {
-    //GL_ETC1_RGB8_OES is not defined in old opengl version
-#ifdef GL_ETC1_RGB8_OES
-    return _supportsETC1;
-#else
-    return false;
-#endif
+    return _supportsETC2;
 }
 
 bool Configuration::supportsS3TC() const
@@ -264,11 +228,6 @@ bool Configuration::supportsBGRA8888() const
 	return _supportsBGRA8888;
 }
 
-bool Configuration::supportsDiscardFramebuffer() const
-{
-	return _supportsDiscardFramebuffer;
-}
-
 bool Configuration::supportsShareableVAO() const
 {
 #if CC_TEXTURE_ATLAS_USE_VAO
@@ -277,35 +236,6 @@ bool Configuration::supportsShareableVAO() const
     return false;
 #endif
 }
-
-bool Configuration::supportsMapBuffer() const
-{
-    // Fixes Github issue #16123
-    //
-    // XXX: Fixme. Should check GL ES and not iOS or Android
-    // For example, linux could be compiled with GL ES. Or perhaps in the future Android will
-    // support OpenGL. This is because glMapBufferOES() is an extension of OpenGL ES. And glMapBuffer()
-    // is always implemented in OpenGL.
-
-    // XXX: Warning. On iOS this is always `true`. Avoiding the comparison.
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
-    return _supportsOESMapBuffer;
-#else
-    return true;
-#endif
-}
-
-bool Configuration::supportsOESDepth24() const
-{
-    return _supportsOESDepth24;
-    
-}
-bool Configuration::supportsOESPackedDepthStencil() const
-{
-    return _supportsOESPackedDepthStencil;
-}
-
-
 
 int Configuration::getMaxSupportDirLightInShader() const
 {

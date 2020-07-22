@@ -86,7 +86,7 @@ extern "C"
 #include "tiffio.h"
 #endif //CC_USE_TIFF
 
-#include "base/etc1.h"
+#include "base/ETCHeader.h"
     
 #if CC_USE_JPEG
 #include "jpeglib.h"
@@ -255,7 +255,7 @@ namespace
         _pixel3_formathash::value_type(PVR3TexturePixelFormat::PVRTC4BPP_RGB,       Texture2D::PixelFormat::PVRTC4),
         _pixel3_formathash::value_type(PVR3TexturePixelFormat::PVRTC4BPP_RGBA,      Texture2D::PixelFormat::PVRTC4A),
 
-        _pixel3_formathash::value_type(PVR3TexturePixelFormat::ETC1,        Texture2D::PixelFormat::ETC),
+        _pixel3_formathash::value_type(PVR3TexturePixelFormat::ETC1,        Texture2D::PixelFormat::RGB8_ETC2),
     };
         
     static const int PVR3_MAX_TABLE_ELEMENTS = sizeof(v3_pixel_formathash_value) / sizeof(v3_pixel_formathash_value[0]);
@@ -466,11 +466,16 @@ Texture2D::PixelFormat getDevicePixelFormat(Texture2D::PixelFormat format)
                 return format;
             else
                 return Texture2D::PixelFormat::RGBA8888;
-        case Texture2D::PixelFormat::ETC:
-            if(Configuration::getInstance()->supportsETC())
+        case Texture2D::PixelFormat::RGB8_ETC2:
+            if(Configuration::getInstance()->supportsETC2())
                 return format;
             else
                 return Texture2D::PixelFormat::RGB888;
+        case Texture2D::PixelFormat::RGBA8_ETC2_EAC:
+            if(Configuration::getInstance()->supportsETC2())
+                return format;
+            else
+                return Texture2D::PixelFormat::RGBA8888;
         default:
             return format;
     }
@@ -581,7 +586,8 @@ bool Image::initWithImageData(const unsigned char * data, ssize_t dataLen)
         case Format::PVR:
             ret = initWithPVRData(unpackedData, unpackedLen);
             break;
-        case Format::ETC:
+        case Format::ETC1:
+        case Format::ETC2:
             ret = initWithETCData(unpackedData, unpackedLen);
             break;
         case Format::S3TC:
@@ -630,12 +636,22 @@ bool Image::isPng(const unsigned char * data, ssize_t dataLen)
     return memcmp(PNG_SIGNATURE, data, sizeof(PNG_SIGNATURE)) == 0;
 }
 
-
-bool Image::isEtc(const unsigned char * data, ssize_t /*dataLen*/)
+bool Image::isETC1(const unsigned char * data, ssize_t /*dataLen*/dataLen)
 {
-    return etc1_pkm_is_valid((etc1_byte*)data) ? true : false;
+    if (ETCHeader::is_valid_pkm(data)){
+        return ETCHeader(data).getFormat() == GL_COMPRESSED_RGB8_ETC2;
+    }
+    return false;
 }
 
+bool Image::isETC2(const unsigned char * data, ssize_t /*dataLen*/dataLen)
+{
+    if (ETCHeader::is_valid_pkm(data)){
+        GLenum format = ETCHeader(data).getFormat();
+        return (format != GL_COMPRESSED_RGB8_ETC2) && (format != GL_INVALID_VALUE);
+    }
+    return false;
+}
 
 bool Image::isS3TC(const unsigned char * data, ssize_t /*dataLen*/)
 {
@@ -735,9 +751,13 @@ Image::Format Image::detectFormat(const unsigned char * data, ssize_t dataLen)
     {
         return Format::PVR;
     }
-    else if (isEtc(data, dataLen))
+    else if (isETC1(data, dataLen))
     {
-        return Format::ETC;
+        return Format::ETC1;
+    }
+    else if (isETC2(data, dataLen))
+    {
+        return Format::ETC2;
     }
     else if (isS3TC(data, dataLen))
     {
@@ -1415,14 +1435,6 @@ bool Image::initWithPVRv2Data(const unsigned char * data, ssize_t dataLen)
         CCLOG("cocos2d: WARNING: Image is flipped. Regenerate it using PVRTexTool");
     }
     
-    if (! configuration->supportsNPOT() &&
-        (static_cast<int>(header->width) != ccNextPOT(header->width)
-            || static_cast<int>(header->height) != ccNextPOT(header->height)))
-    {
-        CCLOG("cocos2d: ERROR: Loading an NPOT texture (%dx%d) but is not supported on this device", header->width, header->height);
-        return false;
-    }
-    
     if (!testFormatForPvr2TCSupport(formatFlags))
     {
         CCLOG("cocos2d: WARNING: Unsupported PVR Pixel Format: 0x%02X. Re-encode it with a OpenGL pixel format variant", (int)formatFlags);
@@ -1649,19 +1661,6 @@ bool Image::initWithPVRv3Data(const unsigned char * data, ssize_t dataLen)
                 heightBlocks = height / 4;
                 break;
             case PVR3TexturePixelFormat::ETC1:
-                if (!Configuration::getInstance()->supportsETC())
-                {
-                    CCLOG("cocos2d: Hardware ETC1 decoder not present. Using software decoder");
-                    int bytePerPixel = 3;
-                    unsigned int stride = width * bytePerPixel;
-                    _unpack = true;
-                    _mipmaps[i].len = width*height*bytePerPixel;
-                    _mipmaps[i].address = new (std::nothrow) unsigned char[width*height*bytePerPixel];
-                    if (etc1_decode_image(static_cast<const unsigned char*>(_data+dataOffset), static_cast<etc1_byte*>(_mipmaps[i].address), width, height, bytePerPixel, stride) != 0)
-                    {
-                        return false;
-                    }
-                }
                 blockSize = 4 * 4; // Pixel by pixel block size for 4bpp
                 widthBlocks = width / 4;
                 heightBlocks = height / 4;
@@ -1718,60 +1717,43 @@ bool Image::initWithPVRv3Data(const unsigned char * data, ssize_t dataLen)
 
 bool Image::initWithETCData(const unsigned char * data, ssize_t dataLen)
 {
-    const etc1_byte* header = static_cast<const etc1_byte*>(data);
-    
     //check the data
-    if (! etc1_pkm_is_valid(header))
+    if (!ETCHeader::is_valid_pkm(data))
     {
-        return  false;
+        return false;
     }
 
-    _width = etc1_pkm_get_width(header);
-    _height = etc1_pkm_get_height(header);
+    ETCHeader header = ETCHeader(data);
 
+    _width = header.getWidth();
+    _height = header.getHeight();
     if (0 == _width || 0 == _height)
     {
         return false;
     }
 
-    if (Configuration::getInstance()->supportsETC())
+    switch (header.getFormat())
     {
-        //old opengl version has no define for GL_ETC1_RGB8_OES, add macro to make compiler happy. 
-#ifdef GL_ETC1_RGB8_OES
-        _renderFormat = Texture2D::PixelFormat::ETC;
-        _dataLen = dataLen - ETC_PKM_HEADER_SIZE;
-        _data = static_cast<unsigned char*>(malloc(_dataLen * sizeof(unsigned char)));
-        memcpy(_data, static_cast<const unsigned char*>(data) + ETC_PKM_HEADER_SIZE, _dataLen);
-        return true;
-#else
-        CC_UNUSED_PARAM(dataLen);
-#endif
-    }
-    else
-    {
-        CCLOG("cocos2d: Hardware ETC1 decoder not present. Using software decoder");
-
-         //if it is not gles or device do not support ETC, decode texture by software
-        int bytePerPixel = 3;
-        unsigned int stride = _width * bytePerPixel;
-        _renderFormat = Texture2D::PixelFormat::RGB888;
-        
-        _dataLen =  _width * _height * bytePerPixel;
-        _data = static_cast<unsigned char*>(malloc(_dataLen * sizeof(unsigned char)));
-        
-        if (etc1_decode_image(static_cast<const unsigned char*>(data) + ETC_PKM_HEADER_SIZE, static_cast<etc1_byte*>(_data), _width, _height, bytePerPixel, stride) != 0)
-        {
-            _dataLen = 0;
-            if (_data != nullptr)
-            {
-                free(_data);
-            }
+        case GL_COMPRESSED_RGB8_ETC2:
+            _renderFormat = Texture2D::PixelFormat::RGB8_ETC2;
+            break;
+        case GL_COMPRESSED_RGBA8_ETC2_EAC:
+            _renderFormat = Texture2D::PixelFormat::RGBA8_ETC2_EAC;
+            break;
+        // TODO
+        case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
+        case GL_COMPRESSED_R11_EAC:
+        case GL_COMPRESSED_RG11_EAC:
+        case GL_COMPRESSED_SIGNED_R11_EAC:
+        case GL_COMPRESSED_SIGNED_RG11_EAC:
+        default:
             return false;
-        }
-        
-        return true;
     }
-    return false;
+
+    _dataLen = dataLen - ETCHeader::SIZE;
+    _data = static_cast<unsigned char*>(malloc(_dataLen * sizeof(unsigned char)));
+    memcpy(_data, static_cast<const unsigned char*>(data) + ETCHeader::SIZE, _dataLen);
+    return true;
 }
 
 bool Image::initWithTGAData(tImageTGA* tgaData)

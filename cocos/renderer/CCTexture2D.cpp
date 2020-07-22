@@ -70,16 +70,14 @@ namespace {
         PixelFormatInfoMapValue(Texture2D::PixelFormat::A8, Texture2D::PixelFormatInfo(GL_ALPHA, GL_ALPHA, GL_UNSIGNED_BYTE, 8, false, false)),
         PixelFormatInfoMapValue(Texture2D::PixelFormat::I8, Texture2D::PixelFormatInfo(GL_LUMINANCE, GL_LUMINANCE, GL_UNSIGNED_BYTE, 8, false, false)),
         PixelFormatInfoMapValue(Texture2D::PixelFormat::AI88, Texture2D::PixelFormatInfo(GL_LUMINANCE_ALPHA, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, 16, false, true)),
-        
+        PixelFormatInfoMapValue(Texture2D::PixelFormat::RGB8_ETC2, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGB8_ETC2, 0xFFFFFFFF, 0xFFFFFFFF, 4, true, false)),
+        PixelFormatInfoMapValue(Texture2D::PixelFormat::RGBA8_ETC2_EAC, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGBA8_ETC2_EAC, 0xFFFFFFFF, 0xFFFFFFFF, 8, true, true)),
+
 #ifdef GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG
         PixelFormatInfoMapValue(Texture2D::PixelFormat::PVRTC2, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGB_PVRTC_2BPPV1_IMG, 0xFFFFFFFF, 0xFFFFFFFF, 2, true, false)),
         PixelFormatInfoMapValue(Texture2D::PixelFormat::PVRTC2A, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGBA_PVRTC_2BPPV1_IMG, 0xFFFFFFFF, 0xFFFFFFFF, 2, true, true)),
         PixelFormatInfoMapValue(Texture2D::PixelFormat::PVRTC4, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG, 0xFFFFFFFF, 0xFFFFFFFF, 4, true, false)),
         PixelFormatInfoMapValue(Texture2D::PixelFormat::PVRTC4A, Texture2D::PixelFormatInfo(GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG, 0xFFFFFFFF, 0xFFFFFFFF, 4, true, true)),
-#endif
-        
-#ifdef GL_ETC1_RGB8_OES
-        PixelFormatInfoMapValue(Texture2D::PixelFormat::ETC, Texture2D::PixelFormatInfo(GL_ETC1_RGB8_OES, 0xFFFFFFFF, 0xFFFFFFFF, 4, true, false)),
 #endif
         
 #ifdef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
@@ -590,10 +588,9 @@ bool Texture2D::initWithMipmaps(MipmapInfo* mipmaps, int mipmapsNum, PixelFormat
     const PixelFormatInfo& info = formatItr->second;
 
     if (info.compressed && !Configuration::getInstance()->supportsPVRTC()
-                        && !Configuration::getInstance()->supportsETC()
-                        && !Configuration::getInstance()->supportsS3TC()
-                        && !Configuration::getInstance()->supportsATITC())
-    {
+        && !Configuration::getInstance()->supportsETC2()
+        && !Configuration::getInstance()->supportsS3TC()
+        && !Configuration::getInstance()->supportsATITC()) {
         CCLOG("cocos2d: WARNING: PVRTC/ETC images are not supported");
         return false;
     }
@@ -1375,8 +1372,11 @@ const char* Texture2D::getStringForFormat() const
         case Texture2D::PixelFormat::PVRTC4A:
             return "PVRTC4A";
             
-        case Texture2D::PixelFormat::ETC:
-            return "ETC";
+        case Texture2D::PixelFormat::RGB8_ETC2:
+            return "RGB8_ETC2";
+
+        case Texture2D::PixelFormat::RGBA8_ETC2_EAC:
+            return "RGBA8_ETC2_EAC";
 
         case Texture2D::PixelFormat::S3TC_DXT1:
             return "S3TC_DXT1";

@@ -158,7 +158,7 @@ base/ccRandom.cpp \
 base/ccTypes.cpp \
 base/ccUTF8.cpp \
 base/ccUtils.cpp \
-base/etc1.cpp \
+base/ETCHeader.cpp \
 base/pvr.cpp \
 base/s3tc.cpp \
 renderer/CCBatchCommand.cpp \
