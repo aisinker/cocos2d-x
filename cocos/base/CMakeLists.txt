@@ -32,7 +32,7 @@ set(COCOS_BASE_HEADER
     base/base64.h
     base/CCEventListenerController.h
     base/s3tc.h
-    base/ETCHeader.h
+    base/ETCParser.h
     base/CCGameController.h
     base/CCConsole.h
     base/CCEvent.h
@@ -143,7 +143,7 @@ set(COCOS_BASE_SRC
     base/ccTypes.cpp
     base/ccUTF8.cpp
     base/ccUtils.cpp
-    base/ETCHeader.cpp
+    base/ETCParser.cpp
     base/pvr.cpp
     base/s3tc.cpp
     ${COCOS_BASE_SPECIFIC_SRC}

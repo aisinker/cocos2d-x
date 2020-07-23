@@ -86,7 +86,7 @@ extern "C"
 #include "tiffio.h"
 #endif //CC_USE_TIFF
 
-#include "base/ETCHeader.h"
+#include "base/ETCParser.h"
     
 #if CC_USE_JPEG
 #include "jpeglib.h"
@@ -638,19 +638,13 @@ bool Image::isPng(const unsigned char * data, ssize_t dataLen)
 
 bool Image::isETC1(const unsigned char * data, ssize_t /*dataLen*/dataLen)
 {
-    if (ETCHeader::is_valid_pkm(data)){
-        return ETCHeader(data).getFormat() == GL_COMPRESSED_RGB8_ETC2;
-    }
-    return false;
+    return ETCParser(data).getFormat() == GL_COMPRESSED_RGB8_ETC2;
 }
 
 bool Image::isETC2(const unsigned char * data, ssize_t /*dataLen*/dataLen)
 {
-    if (ETCHeader::is_valid_pkm(data)){
-        GLenum format = ETCHeader(data).getFormat();
-        return (format != GL_COMPRESSED_RGB8_ETC2) && (format != GL_INVALID_VALUE);
-    }
-    return false;
+    GLenum format = ETCParser(data).getFormat();
+    return (format != GL_COMPRESSED_RGB8_ETC2) && (format != GL_INVALID_VALUE);
 }
 
 bool Image::isS3TC(const unsigned char * data, ssize_t /*dataLen*/)
@@ -1717,13 +1711,11 @@ bool Image::initWithPVRv3Data(const unsigned char * data, ssize_t dataLen)
 
 bool Image::initWithETCData(const unsigned char * data, ssize_t dataLen)
 {
-    //check the data
-    if (!ETCHeader::is_valid_pkm(data))
+    ETCParser header = ETCParser(data);
+    if (!header.is_valid())
     {
         return false;
     }
-
-    ETCHeader header = ETCHeader(data);
 
     _width = header.getWidth();
     _height = header.getHeight();
@@ -1750,9 +1742,9 @@ bool Image::initWithETCData(const unsigned char * data, ssize_t dataLen)
             return false;
     }
 
-    _dataLen = dataLen - ETCHeader::SIZE;
+    _dataLen = dataLen - header.getTextureDataOffset();
     _data = static_cast<unsigned char*>(malloc(_dataLen * sizeof(unsigned char)));
-    memcpy(_data, static_cast<const unsigned char*>(data) + ETCHeader::SIZE, _dataLen);
+    memcpy(_data, static_cast<const unsigned char*>(data) + header.getTextureDataOffset(), _dataLen);
     return true;
 }
 
